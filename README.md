@@ -2,7 +2,7 @@
 
 Batch-redacts **addresses** in payslip PDFs from one Excel/CSV.  
 **White masks by default**, names/dates/IDs kept, OCR fallback, tidy merges, and a results workbook with **clickable links**.  
-> 🔎 We’re actively trying — and have **successfully redacted** — different **resume** templates too.
+
 
 ---
 
