@@ -1,143 +1,143 @@
-# Payslip Universal Redactor
+# 🧾 Payslip Universal Redactor
 
-**White-mask redaction for PDFs driven by an Excel/CSV roster — keeps names, keeps pay dates & emp IDs, and surgically wipes addresses**
-
----
-
-## What this tool does
-
-Give it a spreadsheet of employees and links to their payslip PDFs. For each PDF it will:
-
-* **Redact in white** (not black boxes), permanently removing content from the file.
-* **Never redact the employee’s name** (fuzzy matched at ≥60% to survive OCR glitches, spacing, or initials).
-* **Preserve dates and emp IDs** (so audits still make sense).
-* **Only mask values to the right of specific labels**:
-  `Address`, `Amount in words`, `Net Pay in {INR|USD|CAD}`, `DOB` — the label text stays visible; the **value** is masked.
-* **Catch free-form address blocks** you didn’t label, in two places:
-
-  * **Directly under the name** (a smart band that scoops up short all-caps fragments and lone letters like “E ST”, “N”).
-  * **Bottom-left stubs** (common tear-off areas) using a small cluster heuristic.
-* **Safely merge rectangles** without ever crossing a detected name box.
-* **Return a results spreadsheet** with **clickable links** to each redacted PDF.
-
-Everything runs locally. If a page has no extractable text, it will **fall back to Tesseract OCR** (if installed).
+Batch-redacts **addresses** in payslip PDFs from one Excel/CSV.  
+**White masks by default**, names/dates/IDs kept, OCR fallback, tidy merges, and a results workbook with **clickable links**.  
+> 🔎 We’re actively trying — and have **successfully redacted** — different **resume** templates too.
 
 ---
 
-## Why it’s hard — and how this script solves it
+## ✨ Highlights
 
-* **Names are sticky**: Fuzzy matching (≥0.60) guards against unwanted name redaction across fonts/kerning/ocr noise.
-* **Addresses are sneaky**: Payslips often split addresses into tiny, all-caps shards. The **“under name” band** + **“bottom-left cluster”** logic treats short caps lines (“SHERBOURNE”, “N”) and digit-bearing snippets as address-ish and merges them into one clean mask.
-* **Labels keep context**: We **leave labels visible** and only wipe the **values** to their right on the same line.
-* **Dates & emp_id remain readable**: Regex + context windows keep pay dates intact and prevent emp_id from being wiped.
-
----
-
-## Input & output at a glance
-
-* **Input file**: `Payslips.xlsx` (default) or any `.xlsx`/`.csv` you specify.
-  The script auto-detects likely columns:
-
-  * Employee ID: any of `empid, emp_id, employeeid, employee_id, id`
-  * Employee name: any of `empname, emp_name, employee, employee_name, name`
-  * Payslip path/URL: any of `payslip, payslip_link, payslip_path, file, pdf …`
-    (or any column that looks like a PDF path/URL)
-* **Per-row input**: local path or relative path to a PDF (relative is resolved next to the spreadsheet).
-* **Per-row output**: a sibling file named `*_redacted.pdf`.
-* **Summary output**: `Payslips_redacted.xlsx` with a `payslip_redacted_link` column made **clickable**.
+- 🧍 **Name-safe by design** — fuzzy ≥ **60%** so names are **never** redacted (survives OCR/spacing).
+- 🏷️ **Label → value** wipe for: `Address`, `Amount in words`, `Net Pay in {INR|USD|CAD}`, `DOB`.  
+  The **label stays visible**, only the **value** to the right (same line) is masked.
+- 🏠 **Free-form address capture**:
+  - **Under the employee name**: scoops short ALL-CAPS shards like `SHERBOURNE`, `N` and number lines.
+  - **Bottom-left stubs**: clusters adjacent “tear-off” lines and redacts as one clean block.
+- 📅🔢 **Keeps dates & emp_id** (many formats, ranges, “Month YYYY”, `YYYYMMDD`, and context near pay-date labels).
+- 🧠 **OCR fallback** with Tesseract for image-only pages.
+- 🧼 **White masks** with safe merges (never cross a detected name box).
+- 📊 **Output workbook**: `Payslips_redacted.xlsx` with **clickable** paths to redacted PDFs.
 
 ---
 
-## Quick start
+## 🚀 Quick Start
 
 ```bash
-# Minimal: uses Payslips.xlsx in the current folder
+# Default: looks for Payslips.xlsx in the current folder
 python payslip_universal_redactor.py
 
-# Verbose logging
+# Be chatty
 python payslip_universal_redactor.py --verbose
 
-# Pick a specific sheet
+# Pick a specific input & sheet
 python payslip_universal_redactor.py --input MyRoster.xlsx --sheet "June"
 
 # CSV input
 python payslip_universal_redactor.py --input roster.csv
 
-# Custom output filename for the results workbook
+# Custom results workbook name
 python payslip_universal_redactor.py --out MyRedactions.xlsx
 
-# Skip writing the helper notebook
+# Skip writing the helper .ipynb
 python payslip_universal_redactor.py --no-notebook
+````
+
+**Per-file output:** each PDF → `*_redacted.pdf` beside the original
+**Summary output:** `Payslips_redacted.xlsx` → column `payslip_redacted_link` is made **clickable**
+
+---
+
+## 📥 Input Format (auto-detect)
+
+Provide an **Excel (.xlsx)** or **CSV** with columns like:
+
+* **Employee name**: `empname`, `emp_name`, `employee`, `employee_name`, `name`
+* **Employee ID**: `empid`, `emp_id`, `employeeid`, `employee_id`, `id`
+* **Payslip path/URL**: `payslip`, `payslip_link`, `payslip_path`, `file`, `pdf`
+  (or any column that looks like a `.pdf` path/URL)
+
+🗂️ **Relative** PDF paths resolve **relative to the spreadsheet file**.
+
+---
+
+## 🔒 What’s Redacted vs Kept
+
+**Redacted (white):**
+
+* Values to the **right** of labels: `Address`, `Amount in words`, `Net Pay in INR/USD/CAD`, `DOB`
+* **Under-name** address fragments (ALL-CAPS shards, single letters like `N`, and digit lines)
+* **Bottom-left** address clusters
+
+**Kept (never masked):**
+
+* **Employee name** (fuzzy ≥ 0.60)
+* **Dates** (ISO, DMY, ranges, times, “Month YYYY”, `YYYYMMDD`, `YYYY MM DD`)
+* **Employee ID** (direct/contained match)
+* Pay dates near **PAYMENT DATE / PAY END DATE** labels
+
+---
+
+## 🎛️ Mask Color
+
+* Default is **white**.
+* To switch to **black**, change the `fill` passed to `redact_page` in `process_pdf`:
+
+```python
+# inside process_pdf(...)
+n = redact_page(page, rects, fill=(0,0,0))  # ⬛ black masks
 ```
 
-**Tip:** Relative PDF paths in your spreadsheet are resolved relative to the spreadsheet’s location.
+> The function accepts **RGB floats** in 0–1; `(1,1,1)` = white, `(0,0,0)` = black.
 
 ---
 
-## How the redaction pipeline works (high level)
+## ⚙️ Requirements
 
-1. **Extract words** from the page; if none are found and Tesseract exists, render and OCR.
-2. **Protect names**: find all windows of tokens that fuzzy-match the normalized employee name (≥60%); mark these rectangles as **protected**.
-3. **Label→Value masks**: for each label in
-   `Address`, `Amount in words`, `Net Pay in INR/USD/CAD`, `DOB`,
-   redact only the tokens **to the right on the same line**.
-4. **Address blocks**:
+* Python **3.8+**
+* Auto-installs: `pymupdf`, `pandas`, `openpyxl`, `pillow`, `pytesseract`
+* Optional but recommended for scanned PDFs: **Tesseract** CLI on your system `PATH`
 
-   * **Under the name**: define a narrow band directly beneath the name’s union box; collect consecutive address-ish lines (short all-caps, digits, street/unit words) and mask as **one tidy rectangle**.
-   * **Bottom-left area**: cluster adjacent lines and mark a cluster as address if it contains strong signals or multiple weak all-caps snippets; redact the cluster union.
-5. **Numbers**: redact numeric tokens **except** if they look like **dates** (including ranges, times, “Month 2024”, “20250630”, “2025 06 30”) or match/contain the **emp_id**, or appear near **PAYMENT DATE / PAY END DATE**.
-6. **Safety merge** rectangles without crossing any protected name box.
-7. **Apply white masks** (with a small padding) and write the redacted PDF.
+A small helper **Jupyter notebook** is written next to your input for convenience (disable with `--no-notebook`).
 
 ---
 
-## Requirements
+## 🧠 How It Works (brief)
 
-* Python 3.8+
-* The script auto-installs these Python packages if missing:
-  `pymupdf`, `pandas`, `openpyxl`, `pillow`, `pytesseract`
-* **Optional** (for image-only PDFs):
-  **Tesseract** CLI on your system `PATH` (`pytesseract` is the Python glue).
-  Without it, image-only pages won’t OCR and may not redact correctly.
-
----
-
-## Exit codes
-
-* `0` – success
-* `2` – input reading / validation error (missing file, unsupported type, etc.)
-* `3` – failed to write the results workbook
+1. Extract words (PyMuPDF); if none, rasterize and **OCR** with Tesseract.
+2. **Protect** any text window that fuzzy-matches the employee **name** (never redact or merge across).
+3. For each label (`Address`, etc.), **redact only the value** to its right on the **same line**.
+4. Find address blocks **under the name** (consecutive address-ish lines) and **bottom-left** clusters; mask as **clean rectangles**.
+5. **Keep** date-like tokens and the **emp_id**; redact other numeric tokens.
+6. Apply **white** (or chosen color) masks with a small padding, save the redacted PDF.
+7. Write a results workbook and make links **clickable**.
 
 ---
 
-## Troubleshooting
+## 🧪 Notes & Troubleshooting
 
-* **“PDF not found” in results**
-  Ensure the spreadsheet’s PDF paths are correct. Relative paths are resolved next to the spreadsheet file.
-* **Name isn’t preserved**
-  Make sure the spreadsheet has a name column; the script warns if it can’t detect one. The fuzzy match ignores 1-letter initials; unusual scripts/fonts may need cleaner OCR.
-* **Dates got masked**
-  Add “Payment Date” or “Pay End Date” labels near the dates in the PDF template if possible; the script already keeps many formats, but context helps.
-* **Address fragments still showing**
-  The under-name band and bottom-left cluster are broad, but if your template puts address lines far from the name, make sure “Address:” labels exist — the label→value rule will catch them.
-* **OCR quality**
-  Install Tesseract and ensure PDFs are at least ~300 DPI when rasterized; noisy scans can hurt detection.
+* **“PDF not found”** → Fix paths; remember relative paths are resolved **next to the spreadsheet**.
+* **Name got masked** → Ensure a name column exists; fuzzy threshold is 0.60 and ignores single-letter initials.
+* **Dates masked** → Most formats are recognized; placing **pay-date labels** near dates helps context.
+* **Address leaks** → Under-name band & bottom-left clusters are broad; adding an explicit `Address:` label makes it deterministic.
+* **Scanned PDFs** → Install Tesseract; quality improves around **300 DPI**.
+
+**Exit codes:** `0` success · `2` input/read error · `3` results workbook write failure
 
 ---
 
-## Privacy & safety
+## 🔧 Customize (optional)
 
-* Redaction uses **PyMuPDF redaction annotations** with `apply_redactions()`, which **removes content** from the saved PDF (not just hides it).
-* Processing is **local**; nothing is sent anywhere.
-
----
-
-## Extending (if you ever need to)
-
-* Add new labels to `ADDRESS_LABELS`, `AMOUNT_WORDS_LABELS`, etc.
-* Adjust street/unit vocab in `STREET_KEYWORDS`, `UNIT_KEYWORDS`.
-* Tweak the all-caps heuristic via `RE_SHORT_UPPER`.
-* The name-match threshold (currently **0.60**) can be raised/lowered in `name_match_ratio`/`fuzzy_contains_name`.
+* Add more labels in `ADDRESS_LABELS`, `AMOUNT_WORDS_LABELS`, etc.
+* Extend street/unit vocab in `STREET_KEYWORDS`, `UNIT_KEYWORDS`.
+* Tune all-caps detection via `RE_SHORT_UPPER`.
+* Adjust name fuzzy threshold if your OCR is noisy.
 
 ---
 
+## 🛡️ Privacy
+
+Uses PyMuPDF `apply_redactions()` → content is **removed**, not merely hidden. All processing is **local**.
+
+```
+```
