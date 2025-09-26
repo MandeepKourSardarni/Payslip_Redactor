@@ -8,16 +8,16 @@ Batch-redacts **addresses** in payslip PDFs from one Excel/CSV.
 
 ## ✨ Highlights
 
-- 🧍 **Name-safe by design** — fuzzy ≥ **60%** so names are **never** redacted (survives OCR/spacing).
-- 🏷️ **Label → value** wipe for: `Address`, `Amount in words`, `Net Pay in {INR|USD|CAD}`, `DOB`.  
-  The **label stays visible**, only the **value** to the right (same line) is masked.
-- 🏠 **Free-form address capture**:
-  - **Under the employee name**: scoops short ALL-CAPS shards like `SHERBOURNE`, `N` and number lines.
-  - **Bottom-left stubs**: clusters adjacent “tear-off” lines and redacts as one clean block.
-- 📅🔢 **Keeps dates & emp_id** (many formats, ranges, “Month YYYY”, `YYYYMMDD`, and context near pay-date labels).
-- 🧠 **OCR fallback** with Tesseract for image-only pages.
-- 🧼 **White masks** with safe merges (never cross a detected name box).
-- 📊 **Output workbook**: `Payslips_redacted.xlsx` with **clickable** paths to redacted PDFs.
+- 🎯 **Made for checks and audits** — helps confirm if a worker is on the supplier’s payroll and can flag subcontracting/third-party work.
+- 🔐 **Hides personal info** — redacts address, DOB, “amount in words,” and net pay. **Keeps** name, dates, and emp_id.  
+  Default mask is white; switch to black with `fill=(0,0,0)`.
+- 📦 **Works in bulk** — handles **500–1000+** payslips in one go from a single Excel/CSV, cutting manual work for HR/Finance/Payroll.
+- 🖥️ **Runs on your computer** — no uploads to any website or third party.
+- ⚡ **Fast and scan-friendly** — OCR fallback for image-only PDFs.
+- 🧼 **Clean masks** — safe merging that never covers the employee name.
+- 📑 **Easy results** — redacted PDFs + an Excel file (`Payslips_redacted.xlsx`) with **clickable links**.
+- 🧭 **Works with many templates** — robust across different payslip layouts; we’ve also redacted multiple **resume** templates successfully.
+
 
 ---
 
